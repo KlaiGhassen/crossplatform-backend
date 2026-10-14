@@ -1,26 +1,33 @@
-version: '3.8'
-
 services:
   app:
     build: .
     container_name: movie_app_backend
     ports:
-      - "${PORT}:${PORT}"
+      - "5000:5000"
     env_file:
       - .env
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/movies_db
     volumes:
       - uploads_data:/app/public/uploads
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: always
 
   mongo:
-    image: mongo:latest
+    # Pinned to the same major version already running fine on the server
+    image: mongo:7
     container_name: movie_app_db
-    ports:
-      - "27017:27017"
+    # No published port: only reachable from the app over the compose network
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
 volumes:
